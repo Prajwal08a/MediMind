@@ -1,8 +1,8 @@
 import type { VerificationResult, Document, Model, Voice } from '../types';
 
-// The new secure way to call our backend proxy function.
+// The new secure way to call our Vercel backend proxy function.
 const callProxy = async (action: string, payload: object) => {
-    const response = await fetch('/.netlify/functions/gemini-proxy', {
+    const response = await fetch('/api/gemini-proxy', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -15,7 +15,7 @@ const callProxy = async (action: string, payload: object) => {
         throw new Error(errorData.error || `Proxy request failed with status ${response.status}`);
     }
     
-    // For streaming responses, the body is handled differently
+    // For streaming responses, the body is handled directly by the browser's fetch stream consumer.
     if (action === 'generateStream') {
         return response;
     }

@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/gemini-proxy.ts": {
+      "runtime": "nodejs18.x",
+      "maxDuration": 45,
+      "memory": 1024
+    }
+  }
+}

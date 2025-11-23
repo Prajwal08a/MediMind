@@ -4,5 +4,10 @@
   "description": "Serverless proxy for MediMind AI Assistant",
   "dependencies": {
     "@google/genai": "^1.30.0"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "@vercel/node": "^3.0.0",
+    "typescript": "^5.0.0"
   }
 }
