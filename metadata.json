@@ -1,0 +1,5 @@
+{
+  "name": "Copy of Healthcare Chatbot with Corrective RAG",
+  "description": "A medical assistant chatbot that uses Corrective Retrieval-Augmented Generation (RAG). It retrieves information from uploaded clinical guidelines and then verifies its own answers for factual consistency to reduce hallucinations and provide trustworthy responses.",
+  "requestFramePermissions": []
+}
