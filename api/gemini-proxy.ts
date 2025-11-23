@@ -56,12 +56,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         switch (action) {
             case 'summarize': {
                 const { document, systemInstruction, summaryPrompt, modelName } = payload;
-                const response = await ai.models.generateContent({
+                const genAIResponse = await ai.models.generateContent({
                     model: modelName,
                     contents: buildContents(document, summaryPrompt),
                     config: { systemInstruction }
                 });
-                return res.status(200).json(response);
+                return res.status(200).json({ text: genAIResponse.text });
             }
             case 'generateStream': {
                 const { query, document, systemInstruction, modelName } = payload;
@@ -82,22 +82,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'verify': {
                 const { answer, document } = payload;
                 const prompt = `Review the following "GENERATED ANSWER" and determine if it is factually consistent with the "CONTEXT DOCUMENT". Provide your reasoning and a corrected answer if necessary.\n\nGENERATED ANSWER:\n---\n${answer}\n---`;
-                const response = await ai.models.generateContent({
+                const genAIResponse = await ai.models.generateContent({
                     model: 'gemini-3-pro-preview',
                     contents: buildContents(document, prompt),
                     config: { responseMimeType: "application/json", responseSchema: verificationSchema }
                 });
-                return res.status(200).json(response);
+                return res.status(200).json({ text: genAIResponse.text });
             }
             case 'suggestQuestions': {
                  const { summary, modelName } = payload;
                  const prompt = `Based on the following document summary, generate 3 concise and relevant questions a user might want to ask.\n\nSUMMARY:\n---\n${summary}\n---`;
-                 const response = await ai.models.generateContent({
+                 const genAIResponse = await ai.models.generateContent({
                     model: modelName,
                     contents: prompt,
                     config: { responseMimeType: "application/json", responseSchema: suggestedQuestionsSchema }
                 });
-                 return res.status(200).json(response);
+                 return res.status(200).json({ text: genAIResponse.text });
             }
             case 'generateSpeech': {
                 const { text, voice } = payload;
