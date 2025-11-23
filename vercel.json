@@ -1,4 +1,6 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "functions": {
     "api/gemini-proxy.ts": {
       "maxDuration": 45,
