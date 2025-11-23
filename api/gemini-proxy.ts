@@ -38,6 +38,20 @@ const buildContents = (document: Document, prompt: string) => {
     throw new Error('Invalid document type or missing mimeType for image.');
 };
 
+// Helper to select the correct model based on document type
+const getEffectiveModelName = (document: Document, requestedModelName: string): string => {
+    if (document.type === 'image') {
+        // If the user selected the Pro model, upgrade to the Pro vision model.
+        if (requestedModelName === 'gemini-3-pro-preview') {
+            return 'gemini-3-pro-image-preview';
+        }
+        // Otherwise, use the standard vision model.
+        return 'gemini-2.5-flash-image';
+    }
+    // For text documents, use the model the user requested.
+    return requestedModelName;
+};
+
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
@@ -56,8 +70,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         switch (action) {
             case 'summarize': {
                 const { document, systemInstruction, summaryPrompt, modelName } = payload;
+                const effectiveModel = getEffectiveModelName(document, modelName);
                 const genAIResponse = await ai.models.generateContent({
-                    model: modelName,
+                    model: effectiveModel,
                     contents: buildContents(document, summaryPrompt),
                     config: { systemInstruction }
                 });
@@ -65,8 +80,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             case 'generateStream': {
                 const { query, document, systemInstruction, modelName } = payload;
+                const effectiveModel = getEffectiveModelName(document, modelName);
                 const stream = await ai.models.generateContentStream({
-                    model: modelName,
+                    model: effectiveModel,
                     contents: buildContents(document, `Based on the context document, answer the following question: ${query}`),
                     config: { systemInstruction }
                 });
@@ -82,8 +98,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             case 'verify': {
                 const { answer, document } = payload;
                 const prompt = `Review the following "GENERATED ANSWER" and determine if it is factually consistent with the "CONTEXT DOCUMENT". Provide your reasoning and a corrected answer if necessary.\n\nGENERATED ANSWER:\n---\n${answer}\n---`;
+                const verificationModel = document.type === 'image' ? 'gemini-3-pro-image-preview' : 'gemini-3-pro-preview';
+                
                 const genAIResponse = await ai.models.generateContent({
-                    model: 'gemini-3-pro-preview',
+                    model: verificationModel,
                     contents: buildContents(document, prompt),
                     config: { responseMimeType: "application/json", responseSchema: verificationSchema }
                 });
