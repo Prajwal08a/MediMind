@@ -16,7 +16,7 @@ const callProxy = async (action: string, payload: object) => {
     }
     
     // For streaming responses, the body is handled directly by the browser's fetch stream consumer.
-    if (action === 'generateStream') {
+    if (action === 'generateStream' || action === 'summarizeStream') {
         return response;
     }
 
@@ -24,17 +24,30 @@ const callProxy = async (action: string, payload: object) => {
 };
 
 
-export const summarizeDocument = async (document: Document, systemInstruction: string, summaryPrompt: string, modelName: Model): Promise<string> => {
-    if (modelName === 'llama3') return "LLaMA 3 is not integrated in this client-side application.";
-    
-    try {
-        const response = await callProxy('summarize', { document, systemInstruction, summaryPrompt, modelName });
-        return response.text ?? "Unable to generate a summary for this document.";
-    } catch (error) {
-        console.error("Error generating summary via proxy:", error);
-        return "An error occurred while generating the summary.";
+export async function* summarizeDocumentStream(document: Document, systemInstruction: string, summaryPrompt: string, modelName: Model): AsyncGenerator<string> {
+    if (modelName === 'llama3') {
+        yield "LLaMA 3 is not integrated in this client-side application.";
+        return;
     }
-};
+    try {
+        const response = await callProxy('summarizeStream', { document, systemInstruction, summaryPrompt, modelName });
+        if (!response.body) {
+            throw new Error("Response body is null");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            yield decoder.decode(value, { stream: true });
+        }
+    } catch (error) {
+        console.error("Error generating summary stream via proxy:", error);
+        yield "An error occurred while generating the summary.";
+    }
+}
+
 
 export async function* generateAnswerStream(query: string, document: Document, systemInstruction: string, modelName: Model): AsyncGenerator<string> {
     if (modelName === 'llama3') {

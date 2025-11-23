@@ -109,7 +109,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 }
             }}
             placeholder="Start typing..."
-            className="flex-1 py-2.5 px-4 sm:py-3 bg-gray-100 border border-transparent rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200 ease-in-out text-gray-800 resize-none overflow-y-hidden"
+            className="flex-1 py-2.5 px-4 bg-gray-100 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all duration-200 ease-in-out text-gray-800 resize-none overflow-y-hidden"
             disabled={isLoading}
             rows={1}
             style={{ maxHeight: '160px' }}
@@ -117,7 +117,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <button
             type="submit"
             disabled={isLoading || !inputValue.trim()}
-            className="flex-shrink-0 w-11 h-11 sm:w-12 sm:h-12 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-blue-600/50 disabled:cursor-not-allowed transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
+            className="flex-shrink-0 w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-full hover:from-blue-700 hover:to-blue-600 disabled:from-blue-400 disabled:to-blue-300 disabled:cursor-not-allowed transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-white flex items-center justify-center shadow-lg hover:shadow-xl hover:scale-105 active:scale-100"
             aria-label="Send message"
             title="Send message"
           >

@@ -3,7 +3,7 @@
   "outputDirectory": "public",
   "functions": {
     "api/gemini-proxy.ts": {
-      "maxDuration": 45,
+      "maxDuration": 90,
       "memory": 1024
     }
   }

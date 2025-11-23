@@ -82,7 +82,6 @@ export const useCorrectiveRAG = (document: Document, documentId: string, persona
       return;
     }
 
-    // If generation resulted in an empty answer, handle it gracefully.
     if (!fullAnswer.trim()) {
         const noAnswerContent: BotMessageContent = {
             answer: "I couldn't find a relevant answer in the document for your question.",
@@ -97,6 +96,13 @@ export const useCorrectiveRAG = (document: Document, documentId: string, persona
         setIsLoading(false);
         return;
     }
+
+    // Set verifying status after stream is complete
+    setMessages(prev => prev.map(msg => 
+        msg.id === botMessagePlaceholder.id 
+        ? { ...msg, content: { ...(msg.content as BotMessageContent), isVerifying: true, reasoning: "Verifying answer for factual consistency..." } }
+        : msg
+    ));
 
     try {
       const verification = await verifyAnswer(fullAnswer, document);
@@ -116,6 +122,7 @@ export const useCorrectiveRAG = (document: Document, documentId: string, persona
         answer: finalAnswer,
         status: status,
         reasoning: verification.reasoning,
+        isVerifying: false,
       };
       
       setMessages(prev => prev.map(msg => 
@@ -130,6 +137,7 @@ export const useCorrectiveRAG = (document: Document, documentId: string, persona
             answer: fullAnswer,
             status: VerificationStatus.UNVERIFIED,
             reasoning: "I generated an answer, but a system error occurred during the verification step. Please use this response with caution and double-check critical information.",
+            isVerifying: false,
         };
         setMessages(prev => prev.map(msg => 
           msg.id === botMessagePlaceholder.id

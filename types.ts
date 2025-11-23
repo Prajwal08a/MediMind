@@ -20,6 +20,7 @@ export interface BotMessageContent {
   answer: string;
   status: VerificationStatus;
   reasoning?: string;
+  isVerifying?: boolean;
 }
 
 export interface Message {

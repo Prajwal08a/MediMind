@@ -3,7 +3,7 @@ import DocumentManager from './components/DocumentUploader';
 import ChatInterface from './components/ChatInterface';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { ManagedDocument, Persona, SummaryFocus, Model, Voice } from './types';
-import { summarizeDocument, generateSuggestedQuestions } from './services/geminiService';
+import { summarizeDocumentStream, generateSuggestedQuestions } from './services/geminiService';
 import { getSystemInstruction } from './utils/personaInstructions';
 import { getSummaryPrompt } from './utils/summaryPrompts';
 import { LogoIcon } from './components/icons/LogoIcon';
@@ -14,19 +14,42 @@ import PersonaSelector from './components/PersonaSelector';
 import VoiceSelector from './components/VoiceSelector';
 import ModelSelector from './components/ModelSelector';
 
+// Helper to safely get initial state from localStorage
+const getInitialState = <T,>(key: string, defaultValue: T): T => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+        const storedValue = localStorage.getItem(key);
+        if (storedValue !== null) {
+            return JSON.parse(storedValue);
+        }
+        return defaultValue;
+    } catch (error) {
+        console.error(`Error reading localStorage key “${key}”:`, error);
+        return defaultValue;
+    }
+};
+
 const App: React.FC = () => {
   const [documents, setDocuments] = useState<ManagedDocument[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [summary, setSummary] = useState<string>('');
   const [isSummarizing, setIsSummarizing] = useState<boolean>(false);
-  const [persona, setPersona] = useState<Persona>('professional');
+  
+  // States are now initialized from localStorage
+  const [persona, setPersona] = useState<Persona>(() => getInitialState<Persona>('user_persona', 'professional'));
   const [summaryFocus, setSummaryFocus] = useState<SummaryFocus>('key_points');
-  const [model, setModel] = useState<Model>('gemini-2.5-flash');
-  const [voice, setVoice] = useState<Voice>('Kore');
+  const [model, setModel] = useState<Model>(() => getInitialState<Model>('user_model', 'gemini-2.5-flash'));
+  const [voice, setVoice] = useState<Voice>(() => getInitialState<Voice>('user_voice', 'Kore'));
+  
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState<boolean>(false);
 
   const selectedDocument = documents.find(doc => doc.id === selectedDocumentId) || null;
+
+  // Effects to save settings to localStorage on change
+  useEffect(() => { localStorage.setItem('user_persona', JSON.stringify(persona)); }, [persona]);
+  useEffect(() => { localStorage.setItem('user_voice', JSON.stringify(voice)); }, [voice]);
+  useEffect(() => { localStorage.setItem('user_model', JSON.stringify(model)); }, [model]);
 
   const handleDocumentsUpload = (newDocs: ManagedDocument[]) => {
     const newDocuments = [...documents, ...newDocs];
@@ -55,33 +78,48 @@ const App: React.FC = () => {
       return;
     }
 
-    const generateAndSetSummary = async () => {
+    const generateDataSequentially = async () => {
+      // Step 1: Generate Summary via stream
       setIsSummarizing(true);
-      setIsGeneratingSuggestions(true);
       setSummary('');
       setSuggestedQuestions([]);
+      setIsGeneratingSuggestions(false);
+      let finalSummary = '';
+
       try {
         const systemInstruction = getSystemInstruction(persona);
         const summaryPrompt = getSummaryPrompt(summaryFocus);
-        const summaryResult = await summarizeDocument(selectedDocument, systemInstruction, summaryPrompt, model);
-        setSummary(summaryResult);
-
-        if (summaryResult && !summaryResult.toLowerCase().includes("could not generate")) {
-            const questions = await generateSuggestedQuestions(summaryResult, model);
-            setSuggestedQuestions(questions);
+        const stream = summarizeDocumentStream(selectedDocument, systemInstruction, summaryPrompt, model);
+        
+        for await (const chunk of stream) {
+            finalSummary += chunk;
+            setSummary(prev => prev + chunk);
         }
-
-      } catch (error)
- {
-        console.error("Failed to generate summary or suggestions:", error);
-        setSummary("Could not generate a summary for this document.");
+      } catch (error) {
+        console.error("Failed to generate summary:", error);
+        const errorMsg = "Could not generate a summary for this document.";
+        setSummary(errorMsg);
+        finalSummary = errorMsg;
       } finally {
         setIsSummarizing(false);
-        setIsGeneratingSuggestions(false);
+      }
+
+      // Step 2: Generate Suggestions only after summary stream is complete and successful
+      if (finalSummary && !finalSummary.toLowerCase().includes("could not generate")) {
+        setIsGeneratingSuggestions(true);
+        try {
+            const questions = await generateSuggestedQuestions(finalSummary, model);
+            setSuggestedQuestions(questions);
+        } catch (error) {
+            console.error("Failed to generate suggestions:", error);
+            setSuggestedQuestions([]);
+        } finally {
+            setIsGeneratingSuggestions(false);
+        }
       }
     };
 
-    generateAndSetSummary();
+    generateDataSequentially();
   }, [selectedDocument, persona, summaryFocus, model]);
 
   return (
@@ -152,6 +190,7 @@ const App: React.FC = () => {
                 isSummarizing={isSummarizing}
                 summaryFocus={summaryFocus}
                 onSummaryFocusChange={setSummaryFocus}
+                documentType={selectedDocument.type}
               />
           </aside>
         )}

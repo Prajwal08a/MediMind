@@ -68,15 +68,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const { action, payload } = req.body;
 
         switch (action) {
-            case 'summarize': {
+            case 'summarizeStream': {
                 const { document, systemInstruction, summaryPrompt, modelName } = payload;
                 const effectiveModel = getEffectiveModelName(document, modelName);
-                const genAIResponse = await ai.models.generateContent({
+                const stream = await ai.models.generateContentStream({
                     model: effectiveModel,
                     contents: buildContents(document, summaryPrompt),
                     config: { systemInstruction }
                 });
-                return res.status(200).json({ text: genAIResponse.text });
+                
+                res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+                for await (const chunk of stream) {
+                    if (chunk.text) {
+                        res.write(chunk.text);
+                    }
+                }
+                return res.end();
             }
             case 'generateStream': {
                 const { query, document, systemInstruction, modelName } = payload;
